@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+
+    .container {
+      text-align: center;
+      background: white;
+      padding: 30px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 1000px;
+      margin: 30px auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .post-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .post {
+      background: #ffffff;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .post p {
+      margin: 0 0 10px;
+      color: #333;
+    }
+
+    .post small {
+      color: #666;
+    }
+
+    .post button {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .post button.edit {
+      background: #007bff;
+      margin-right: 5px;
+    }
+
+    .post button:hover {
+      opacity: 0.9;
+    }
+
+    .header {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h2 {
+      margin: 0;
+    }
+
+    .header button {
+      background: white;
+      color: #007bff;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .header button:hover {
+      background: #e6e6e6;
+    }
+    
+    .popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .popup-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .popup-content h3 {
+      margin-bottom: 20px;
+    }
+
+    .popup-content button {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Admin Dashboard</h2>
+    <button onclick="togglePostForm()">New Post</button>
+  </div>
+
+  <!-- Form untuk membuat postingan baru -->
+  <div id="post-form" class="container hidden">
+    <textarea id="post-text" placeholder="Write something..." rows="5"></textarea>
+    <button onclick="postText()">Post</button>
+  </div>
+
+  <div class="container">
+    <h3>Posted Messages</h3>
+    <div id="posted-messages" class="post-grid"></div>
+  </div>
+
+  <!-- Popup untuk Edit Post -->
+  <div id="popup" class="popup hidden">
+    <div class="popup-content">
+      <h3 id="popup-title"></h3>
+      <input type="text" id="popup-input" placeholder="Enter new text">
+      <button onclick="saveEdit()">Save</button>
+      <button onclick="closePopup()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    const postsKey = "posts";
+    let posts = [];
+    let editIndex = null;
+
+    // Load posts yang ada dari localStorage
+    function loadPosts() {
+      const storedPosts = localStorage.getItem(postsKey);
+      if (storedPosts) {
+        posts = JSON.parse(storedPosts);
+        renderPosts();
+      }
+    }
+
+    // Menyimpan posts ke localStorage
+    function savePosts() {
+      localStorage.setItem(postsKey, JSON.stringify(posts));
+    }
+
+    // Menampilkan semua postingan
+    function renderPosts() {
+      const postedMessages = document.getElementById("posted-messages");
+      postedMessages.innerHTML = "";
+      posts.forEach((post, index) => {
+        const postElement = document.createElement("div");
+        postElement.className = "post";
+        postElement.innerHTML = `
+          <p>${post.text} <br><small>(Posted at: ${new Date(post.timestamp).toLocaleString()})</small></p>
+          <button class="edit" onclick="openEditPopup(${index})">Edit</button>
+          <button onclick="deletePost(${index})">Delete</button>
+        `;
+        postedMessages.appendChild(postElement);
+      });
+    }
+
+    // Menambah postingan baru
+    function postText() {
+      const postText = document.getElementById("post-text").value;
+      if (postText.trim() === "") {
+        alert("Text cannot be empty!");
+        return;
+      }
+      posts.push({
+        text: postText,
+        timestamp: new Date().toISOString()
+      });
+      savePosts();
+      renderPosts();
+      document.getElementById("post-text").value = "";
+      togglePostForm();
+    }
+
+    // Toggle form untuk membuat postingan
+    function togglePostForm() {
+      const postForm = document.getElementById("post-form");
+      postForm.classList.toggle("hidden");
+    }
+
+    // Buka Popup untuk mengedit postingan
+    function openEditPopup(index) {
+      editIndex = index;
+      document.getElementById("popup-title").innerText = "Edit Post";
+      document.getElementById("popup-input").value = posts[index].text;
+      document.getElementById("popup").classList.remove("hidden");
+    }
+
+    // Menyimpan perubahan editan
+    function saveEdit() {
+      const newText = document.getElementById("popup-input").value;
+      if (newText.trim() === "") {
+        alert("Text cannot be empty!");
+        return;
+      }
+      posts[editIndex].text = newText;
+      savePosts();
+      renderPosts();
+      closePopup();
+    }
+
+    // Menghapus postingan
+    function deletePost(index) {
+      posts.splice(index, 1);
+      savePosts();
+      renderPosts();
+    }
+
+    // Menutup popup
+    function closePopup() {
+      document.getElementById("popup").classList.add("hidden");
+    }
+
+    // Load semua postingan saat halaman admin dimuat
+    loadPosts();
+  </script>
+</body>
+</html>
